@@ -49,37 +49,24 @@ class GithubUserController(private val cache: UserService,
         val userReposUri = URI("$baseUrl/users/$userName/repos")
         try {
             val userResponse = rest.getForEntity(userUri, Map::class.java).body
-            val displayName = userResponse?.get("name").toString()
-            val name: String = userResponse?.get("login").toString()
-            val avatar = userResponse?.get("avatar_url").toString()
-            val geoLocation = userResponse?.get("geo_location").toString()
-            val email = userResponse?.get("email").toString()
-            val url = userResponse?.get("url").toString()
-            val createdAt = userResponse?.get("created_at").toString()
-            val userReposResponse = rest.getForEntity(userReposUri, Array<Any>::class.java).body
-            val repos = mutableSetOf<GithubRepo>()
-            userReposResponse?.forEach {
-                val repoInfo = it as LinkedHashMap<*, *>
-                val repoName = repoInfo["name"].toString()
-                val repoUrl = repoInfo["html_url"].toString()
-                repos.add(GithubRepo(name = repoName, uri = repoUrl))
-            }
+            val userReposResponse = rest.getForObject(userReposUri, Array<GithubRepo>::class.java)
             val temporal = DateTimeFormatter
                 .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
-                .parse(createdAt)
-            val createdAtOutput = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(temporal)
+                .parse(userResponse?.get("created_at").toString())
+            val createdAtOutput = DateTimeFormatter
+                .ofPattern("yyyy-MM-dd HH:mm:ss")
+                .format(temporal)
             return GithubUser(
-                user_name = name,
-                display_name = displayName,
-                avatar = avatar,
-                geo_location = geoLocation,
-                email = email,
-                url = url,
+                user_name = userResponse?.get("login").toString(),
+                display_name = userResponse?.get("name").toString(),
+                avatar = userResponse?.get("avatar_url").toString(),
+                geo_location = userResponse?.get("geo_location").toString(),
+                email = userResponse?.get("email").toString(),
+                url = userResponse?.get("url").toString(),
                 created_at = createdAtOutput,
-                repos = repos
+                repos = userReposResponse?.toSet() ?: setOf()
             )
         } catch (e: HttpClientErrorException) {
-            // Could have failed for more than one reason, just returning a 404 as the main case to worry about is when a user does not exist.
             // Could get any type of error back from Github's api, so we just tell the user of OUR api that the user could not be found.
             throw UserNotFoundException()
         }

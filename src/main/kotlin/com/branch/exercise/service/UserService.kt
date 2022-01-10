@@ -1,7 +1,9 @@
 package com.branch.exercise.service
 
 import com.branch.exercise.domain.GithubUser
-import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.CacheManager
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 /**
@@ -10,15 +12,15 @@ import org.springframework.stereotype.Service
  * This cache does not invalidate on its own unless it grows past a certain point.
  */
 @Service
-class UserService(@Value("\${user.service.cache.limit}") private val cacheLimit: Int) {
-
-    private val users: MutableMap<String, GithubUser> = mutableMapOf()
+class UserService(@Autowired val cacheManager: CacheManager) {
 
     /**
      * Retrieves the user identified by the provided userName or null.
      */
+    @Cacheable(cacheNames = ["user_cache"], key = "#userName")
     fun getUserByNameOrNull(userName: String): GithubUser? {
-        return users[userName]
+        val cache = cacheManager.getCache("user_cache")
+        return cache?.get(userName)?.get() as GithubUser?
     }
 
     /**
@@ -26,18 +28,7 @@ class UserService(@Value("\${user.service.cache.limit}") private val cacheLimit:
      * Subsequent calls to add a user with the same user as a previous call will overwrite any previously saved data.
      */
     fun addUser(githubUser: GithubUser) {
-        // Simple way to prevent cache from growing too large.
-        // In a real system, we would want a more sophisticated solution involving expiration times on each entry.
-        if (users.size >= cacheLimit) {
-            resetCache()
-        }
-        users[githubUser.user_name] = githubUser
-    }
-
-    /**
-     * Clears the user cache.
-     */
-    fun resetCache() {
-        users.clear()
+        val cache = cacheManager.getCache("user_cache")
+        cache?.put(githubUser.user_name, githubUser)
     }
 }

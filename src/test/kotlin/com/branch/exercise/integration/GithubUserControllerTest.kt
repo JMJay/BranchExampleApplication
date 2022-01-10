@@ -31,8 +31,8 @@ class GithubUserControllerTest {
 	@Test
 	fun getRequest_userDoesNotExists_404Response() {
 		val mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build()
-		// Okay, this test is a little flaky because someone could make this ID and this test would start failing
-		// thus is the nature of integration tests. They are a little more like the real experience but also a little more brittle.
+		// Okay, this test is a little flaky because someone could make this ID and this test would start failing.
+		// This is the nature of integration tests. They are a little more like the real experience but also a little more brittle.
 		// We could generate a timestamp or some random number... I think you get the idea.
 		val testUsername = "JMJayJMJayJMJayJMJayJMJayJMJay"
 		val uri = "/user"
